@@ -421,7 +421,7 @@ async def analyze_document(
             )
 
     # Use your existing risk-analysis function.
-    analysis_result = analyze_contract_with_ai(extracted_text)
+    analysis_result = analyze_contract(extracted_text)
 
     return {
         "filename": filename,
