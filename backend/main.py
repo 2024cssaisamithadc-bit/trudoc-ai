@@ -512,6 +512,8 @@ Rules:
    
     # Calculate the score consistently from the AI findings.
     findings = result.get("findings", [])
+    print("DEBUG - AI findings:", findings)
+print("DEBUG - Findings type:", type(findings).__name__)
 
     if not isinstance(findings, list):
         raise ValueError("AI returned invalid findings.")
@@ -568,6 +570,9 @@ Rules:
         f"Screening level: {risk_level}."
     )
 
+print("DEBUG - Final risk score:", result["risk_score"])
+print("DEBUG - Final risk level:", result["risk_level"])
+print("DEBUG - Valid findings count:", result["findings_count"])
     return result
 
 # --------------------------------------------------
