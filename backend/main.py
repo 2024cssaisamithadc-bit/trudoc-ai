@@ -390,28 +390,28 @@ async def analyze_document(
             detail="The file exceeds the 15 MB size limit.",
         )
 
+   
     # Extract text according to the uploaded file type.
     if extension == "pdf":
         extracted_text = extract_pdf_text(file_bytes)
 
     else:
         try:
-            with Image.open(BytesIO(file_bytes)) as image:
-                image.load()
-                extracted_text = pytesseract.image_to_string(
-                    image.convert("RGB")
-                ).strip()
+            image = Image.open(BytesIO(file_bytes))
+            image = image.convert("RGB")
+            extracted_text = pytesseract.image_to_string(image)
 
-        except Exception as exc:
+        except Exception as e:
+            print("Image reading error:", repr(e))
             raise HTTPException(
                 status_code=400,
                 detail=(
                     "Could not read this image. "
                     "Please upload a valid JPG or PNG photo."
                 ),
-            ) from exc
+            ) from e
 
-        if not extracted_text:
+        if not extracted_text or not extracted_text.strip():
             raise HTTPException(
                 status_code=400,
                 detail=(
@@ -420,7 +420,9 @@ async def analyze_document(
                 ),
             )
 
-    analysis_result = analyze_contract_with_ai(extracted_text)
+    analysis_result = analyze_contract(extracted_text)
+
+
 
     return {
         "filename": filename,
@@ -431,13 +433,12 @@ async def analyze_document(
         "preview": extracted_text[:1200],
         **analysis_result,
         "notice": (
-            "This is AI-assisted contract screening, not legal advice. "
-            "AI may miss relevant issues or flag wording that is appropriate "
-            "in context. Review the complete agreement carefully."
+            "This is contract screening, not legal advice. "
+            "Potential issues may require review in context."
         ),
     }
+ 
 
-def analyze_contract_with_ai(text: str) -> dict:
     api_key = os.getenv("GROQ_API_KEY")
 
     if not api_key:
@@ -727,10 +728,9 @@ If no analysis is supplied, answer general questions normally.
 
     except HTTPException:
         raise
-
-    except Exception as exc:
-        print("Chatbot Groq error:", repr(exc))
+    except Exception as e:
+        print("Image reading error:", repr(e))
         raise HTTPException(
-            status_code=502,
-            detail="The AI assistant could not respond. Check the backend terminal.",
-        ) from exc 
+            status_code=400,
+            detail=f"Image reading failed: {str(e)}",
+        ) from e
