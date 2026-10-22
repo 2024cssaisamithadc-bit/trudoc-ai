@@ -508,15 +508,23 @@ Rules:
         response.choices[0].message.content
     )
 
-    # Validate the essential fields before displaying the report.
-   
+  
     # Calculate the score consistently from the AI findings.
     findings = result.get("findings", [])
-    print("DEBUG - AI findings:", findings)
-print("DEBUG - Findings type:", type(findings).__name__)
 
     if not isinstance(findings, list):
         raise ValueError("AI returned invalid findings.")
+
+    print("DEBUG - Finding count:", len(findings))
+    print(
+        "DEBUG - Risk levels:",
+        [
+            (f.get("title"), f.get("level"))
+            for f in findings
+            if isinstance(f, dict)
+        ]
+    )
+    print("DEBUG - Findings type:", type(findings).__name__)
 
     level_points = {
         "High": 25,
@@ -533,7 +541,7 @@ print("DEBUG - Findings type:", type(findings).__name__)
             continue
 
         title = str(finding.get("title", "")).strip()
-        level = str(finding.get("level", "")).capitalize()
+        level = str(finding.get("level", "")).strip().capitalize()
 
         if not title or level not in level_points:
             continue
@@ -570,10 +578,12 @@ print("DEBUG - Findings type:", type(findings).__name__)
         f"Screening level: {risk_level}."
     )
 
-print("DEBUG - Final risk score:", result["risk_score"])
-print("DEBUG - Final risk level:", result["risk_level"])
-print("DEBUG - Valid findings count:", result["findings_count"])
+    print("DEBUG - Final risk score:", result["risk_score"])
+    print("DEBUG - Final risk level:", result["risk_level"])
+    print("DEBUG - Valid findings count:", result["findings_count"])
+
     return result
+
 
 # --------------------------------------------------
 # TRUDOC AI CHATBOT
