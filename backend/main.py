@@ -420,8 +420,7 @@ async def analyze_document(
                 ),
             )
 
-    # Use your existing risk-analysis function.
-    analysis_result = analyze_contract(extracted_text)
+    analysis_result = analyze_contract_with_ai(extracted_text)
 
     return {
         "filename": filename,
@@ -510,17 +509,67 @@ Rules:
     )
 
     # Validate the essential fields before displaying the report.
-    score = int(result["risk_score"])
+   
+    # Calculate the score consistently from the AI findings.
+    findings = result.get("findings", [])
 
-    if not 0 <= score <= 100:
-        raise ValueError("AI returned an invalid risk score.")
+    if not isinstance(findings, list):
+        raise ValueError("AI returned invalid findings.")
 
-    if result["risk_level"] not in ["Low", "Medium", "High"]:
-        raise ValueError("AI returned an invalid risk level.")
+    level_points = {
+        "High": 25,
+        "Medium": 15,
+        "Low": 5,
+    }
 
-    result["findings_count"] = len(result.get("findings", []))
+    valid_findings = []
+    seen_titles = set()
+    risk_score = 0
+
+    for finding in findings:
+        if not isinstance(finding, dict):
+            continue
+
+        title = str(finding.get("title", "")).strip()
+        level = str(finding.get("level", "")).capitalize()
+
+        if not title or level not in level_points:
+            continue
+
+        title_key = title.casefold()
+
+        if title_key in seen_titles:
+            continue
+
+        seen_titles.add(title_key)
+
+        finding["title"] = title
+        finding["level"] = level
+        valid_findings.append(finding)
+
+        risk_score += level_points[level]
+
+    risk_score = min(100, risk_score)
+
+    if risk_score >= 50:
+        risk_level = "High"
+    elif risk_score >= 20:
+        risk_level = "Medium"
+    else:
+        risk_level = "Low"
+
+    result["risk_score"] = risk_score
+    result["risk_level"] = risk_level
+    result["findings"] = valid_findings
+    result["findings_count"] = len(valid_findings)
+
+    result["summary"] = (
+        f"The AI identified {len(valid_findings)} potential issue(s). "
+        f"Screening level: {risk_level}."
+    )
 
     return result
+
 # --------------------------------------------------
 # TRUDOC AI CHATBOT
 # URL: POST http://127.0.0.1:8000/api/chat
