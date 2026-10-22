@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "./styles.css";
 import ChatWidget from "./ChatWidget";
 import { Turnstile } from "@marsidev/react-turnstile";
-
+const API_URL = import.meta.env.VITE_API_URL;
 function App() {
   const [turnstileToken, setTurnstileToken] = useState("");
   const [file, setFile] = useState(null);
