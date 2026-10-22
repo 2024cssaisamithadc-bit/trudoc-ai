@@ -1,0 +1,385 @@
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+:root {
+  font-family: "DM Sans", sans-serif;
+  color: #182230;
+  background: #f5f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  min-height: 82px;
+  padding: 18px 7%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: #fff;
+  border-bottom: 1px solid #e9edf3;
+}
+
+.header h1 {
+  margin: 0;
+  color: #163c36;
+  font-family: "Manrope", sans-serif;
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.header h1::before {
+  content: "✓";
+  display: inline-grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  margin-right: 10px;
+  border-radius: 11px;
+  background: #dff5e9;
+  color: #147653;
+  font-size: 21px;
+  vertical-align: middle;
+}
+
+.header p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+}
+
+.container {
+  width: min(1050px, 90%);
+  margin: 0 auto;
+  padding: 52px 0;
+  flex: 1;
+}
+
+.upload-card {
+  padding: 35px;
+  margin-bottom: 28px;
+  background: #fff;
+  border: 1px solid #e5eaf0;
+  border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(20, 40, 60, 0.04);
+}
+
+.upload-card h2,
+.result-card h2 {
+  margin: 0 0 12px;
+  font-family: "Manrope", sans-serif;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  color: #172b28;
+}
+
+.description {
+  max-width: 650px;
+  margin: 0 0 27px;
+  color: #667085;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.upload-area {
+  padding: 27px;
+  margin-bottom: 22px;
+  text-align: center;
+  background: #f8fbfa;
+  border: 2px dashed #b8d9cb;
+  border-radius: 15px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.upload-area:hover {
+  background: #f1faf5;
+  border-color: #258a67;
+}
+
+input[type="file"] {
+  width: 100%;
+  max-width: 480px;
+  padding: 10px;
+  color: #475467;
+  font-size: 14px;
+}
+
+.selected-file {
+  margin: 14px 0 0;
+  color: #18704f;
+  font-size: 14px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+button {
+  width: 100%;
+  min-height: 50px;
+  padding: 14px 20px;
+  color: #fff;
+  background: #176b50;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 4px 10px rgba(23, 107, 80, 0.12);
+  transition: background 0.2s, transform 0.2s;
+}
+
+button:hover:not(:disabled) {
+  background: #10573f;
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  background: #a8b8b1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.error {
+  padding: 15px 17px;
+  margin-top: 20px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #b42318;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.result-card {
+  padding: 35px;
+  margin-bottom: 28px;
+  background: #fff;
+  border: 1px solid #e5eaf0;
+  border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(20, 40, 60, 0.04);
+}
+
+.result-card > p {
+  color: #667085;
+  line-height: 1.8;
+}
+
+.score-section {
+  padding: 25px;
+  margin: 25px 0;
+  background: linear-gradient(135deg, #f1faf5, #f5f9ff);
+  border: 1px solid #dcefe5;
+  border-radius: 16px;
+}
+
+.score-section > p:first-child {
+  margin-top: 0;
+  color: #475467;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.score {
+  margin: 12px 0;
+  color: #176b50;
+  font-family: "Manrope", sans-serif;
+  font-size: 48px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: -2px;
+}
+
+.score span {
+  color: #98a2b3;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.score-section h3,
+.result-card h3 {
+  margin: 28px 0 14px;
+  color: #243d36;
+  font-family: "Manrope", sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.risk-level {
+  display: inline-block;
+  padding: 6px 13px;
+  border-radius: 30px;
+  background: #eaecf0;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.risk-level.high {
+  background: #fee4e2;
+  color: #b42318;
+}
+
+.risk-level.medium {
+  background: #fef0c7;
+  color: #93370d;
+}
+
+.risk-level.low {
+  background: #d1fadf;
+  color: #05603a;
+}
+
+.findings {
+  padding: 0;
+  list-style: none;
+}
+
+.findings li {
+  padding: 18px;
+  margin-bottom: 13px;
+  background: #fcfcfd;
+  border: 1px solid #e4e7ec;
+  border-left: 4px solid #eab54a;
+  border-radius: 10px;
+  color: #344054;
+  line-height: 1.7;
+}
+
+.findings li strong {
+  color: #243d36;
+}
+
+.findings li p {
+  margin-bottom: 0;
+}
+
+.preview {
+  max-height: 300px;
+  padding: 18px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #f8fafc;
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+  color: #475467;
+  font-family: "DM Sans", sans-serif;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.notice {
+  padding: 17px;
+  margin-top: 25px;
+  background: #fffaeb;
+  border: 1px solid #fedf89;
+  border-radius: 10px;
+  color: #93370d;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.footer {
+  padding: 24px 15px;
+  background: #17352e;
+  color: #e1eee8;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.footer p {
+  margin: 3px 0;
+}
+
+@media (min-width: 700px) {
+  .upload-card button {
+    width: auto;
+    min-width: 220px;
+  }
+}
+
+@media (max-width: 600px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 20px 5%;
+    gap: 10px;
+  }
+
+  .header h1 {
+    font-size: 23px;
+  }
+
+  .container {
+    width: 92%;
+    padding: 28px 0;
+  }
+
+  .upload-card,
+  .result-card {
+    padding: 22px;
+    border-radius: 15px;
+  }
+
+  .upload-card h2,
+  .result-card h2 {
+    font-size: 23px;
+  }
+
+  .upload-area {
+    padding: 17px 10px;
+  }
+
+  .score {
+    font-size: 40px;
+  }
+}
+
+.trudoc-ai-warning {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid #ead7a4;
+  border-radius: 10px;
+  background: #fff9e9;
+  color: #5c4b22;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.trudoc-ai-warning p {
+  margin: 6px 0 0;
+}

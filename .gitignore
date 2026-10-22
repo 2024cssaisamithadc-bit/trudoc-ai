@@ -1,0 +1,22 @@
+
+# Secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# React / Node
+node_modules/
+dist/
+
+# Editor files
+.vscode/
+.DS_Store
