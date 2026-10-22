@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 import os
 import json
+import shutil
 
 from fastapi import HTTPException
 import httpx
@@ -27,7 +28,12 @@ if os.name == "nt":
         r"C:\Program Files\Tesseract-OCR\tesseract.exe"
     )
 else:
-    pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+    tesseract_path = shutil.which("tesseract")
+
+    if tesseract_path:
+        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+    else:
+        print("ERROR: Tesseract executable not found on this server")
 
 
 
@@ -406,6 +412,8 @@ async def analyze_document(
         try:
             image = Image.open(BytesIO(file_bytes))
             image = image.convert("RGB")
+            print("OS:", os.name)
+            print("Tesseract executable:", pytesseract.pytesseract.tesseract_cmd)
             extracted_text = pytesseract.image_to_string(image)
 
         except Exception as e:
