@@ -66,7 +66,7 @@ function App() {
       formData.append("turnstile_token", turnstileToken);
 
       const response = await fetch(
-        "http://127.0.0.1:8000/api/analyze",
+       `${import.meta.env.VITE_API_URL}/api/analyze`,
         {
           method: "POST",
           body: formData,
