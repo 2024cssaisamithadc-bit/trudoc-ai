@@ -380,13 +380,7 @@ async def analyze_document(
         raise HTTPException(
             status_code=400,
             detail="The uploaded file is empty.",
-        )
-    if len(file_bytes) > max_size:
-    raise HTTPException(
-        status_code=413,
-        detail="The file exceeds the 15 MB size limit.",
-    )
-
+        )    
     max_size = 15 * 1024 * 1024
 
     if len(file_bytes) > max_size:
