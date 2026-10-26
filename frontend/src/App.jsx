@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import "./styles.css";
 import ChatWidget from "./ChatWidget";
@@ -9,12 +8,23 @@ const API_URL = import.meta.env.VITE_API_URL;
 function App() {
   const [turnstileToken, setTurnstileToken] = useState("");
   const [file, setFile] = useState(null);
+  const [mode, setMode] = useState("contract");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
+  const isImage = (selectedFile) =>
+    selectedFile && selectedFile.type.startsWith("image/");
+
+  const handleModeChange = (newMode) => {
+    setMode(newMode);
+    setFile(null);
+    setResult(null);
+    setError("");
+  };
+
   const handleFileChange = (event) => {
-    const selectedFile = event.target.files[0];
+    const selectedFile = event.target.files?.[0];
 
     setResult(null);
     setError("");
@@ -24,23 +34,30 @@ function App() {
       return;
     }
 
-    const allowedExtensions = [".pdf", ".png", ".jpg", ".jpeg"];
-    const fileName = selectedFile.name.toLowerCase();
+    const allowedExtensions =
+      mode === "contract"
+        ? [".pdf", ".png", ".jpg", ".jpeg"]
+        : [".png", ".jpg", ".jpeg", ".webp"];
 
+    const fileName = selectedFile.name.toLowerCase();
     const isAllowed = allowedExtensions.some((extension) =>
       fileName.endsWith(extension)
     );
 
     if (!isAllowed) {
       setFile(null);
-      setError("Please choose a PDF, PNG, JPG, or JPEG file.");
+      setError(
+        mode === "contract"
+          ? "Choose a PDF, PNG, JPG, or JPEG contract."
+          : "Choose a PNG, JPG, JPEG, or WebP image."
+      );
       event.target.value = "";
       return;
     }
 
     if (selectedFile.size > 15 * 1024 * 1024) {
       setFile(null);
-      setError("File size must be less than 15 MB.");
+      setError("File size must not exceed 15 MB.");
       event.target.value = "";
       return;
     }
@@ -48,9 +65,9 @@ function App() {
     setFile(selectedFile);
   };
 
-  const analyzeDocument = async () => {
+  const analyzeFile = async () => {
     if (!file) {
-      setError("Please choose a PDF, PNG, JPG, or JPEG file first.");
+      setError("Please select a file first.");
       return;
     }
 
@@ -60,9 +77,7 @@ function App() {
     }
 
     if (!API_URL) {
-      setError(
-        "Backend URL is missing. Please configure VITE_API_URL."
-      );
+      setError("Backend URL is missing. Configure VITE_API_URL.");
       return;
     }
 
@@ -75,7 +90,10 @@ function App() {
       formData.append("file", file);
       formData.append("turnstile_token", turnstileToken);
 
-      const response = await fetch(`${API_URL}/api/analyze`, {
+      const endpoint =
+        mode === "image" ? "/api/detect-image" : "/api/analyze";
+
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         body: formData,
       });
@@ -95,46 +113,46 @@ function App() {
     } catch (err) {
       console.error("TruDoc Error:", err);
       setError(
-        err.message || "Failed to analyze document. Please try again."
+        err.message || "Analysis failed. Please try again."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // Prepare the current analysis for the chatbot.
-  const contractContext = result
-    ? {
-        filename: result.filename || file?.name || "Uploaded contract",
-        analyzed_at: result.analyzed_at || "",
-        risk_score: result.risk_score ?? result.score ?? "N/A",
-        risk_level: result.risk_level ?? result.level ?? "Unknown",
-        summary: result.summary || "No summary available.",
-        findings: Array.isArray(result.findings)
-          ? result.findings.slice(0, 10).map((finding) => {
-              if (typeof finding === "string") {
-                return { title: finding };
-              }
+  const contractContext =
+    result && mode === "contract"
+      ? {
+          filename: result.filename || file?.name || "Uploaded contract",
+          analyzed_at: result.analyzed_at || "",
+          risk_score: result.risk_score ?? result.score ?? "N/A",
+          risk_level: result.risk_level ?? result.level ?? "Unknown",
+          summary: result.summary || "No summary available.",
+          findings: Array.isArray(result.findings)
+            ? result.findings.slice(0, 10).map((finding) => {
+                if (typeof finding === "string") {
+                  return { title: finding };
+                }
 
-              return {
-                title:
-                  finding.title ||
-                  finding.clause ||
-                  finding.keyword ||
-                  "Potential risk",
-                description: finding.description || "",
-                explanation: finding.explanation || "",
-                matched_text: finding.matched_text || "",
-                suggestion: finding.suggestion || "",
-                level: finding.level || "",
-              };
-            })
-          : [],
-        notice: result.notice || "",
-      }
-    : null;
+                return {
+                  title:
+                    finding.title ||
+                    finding.clause ||
+                    finding.keyword ||
+                    "Potential risk",
+                  description: finding.description || "",
+                  explanation: finding.explanation || "",
+                  matched_text: finding.matched_text || "",
+                  suggestion: finding.suggestion || "",
+                  level: finding.level || "",
+                };
+              })
+            : [],
+          notice: result.notice || "",
+        }
+      : null;
 
-  const contractKey = result
+  const contractKey = contractContext
     ? String(
         result.analyzed_at ||
           `${result.filename || file?.name || ""}-${
@@ -155,22 +173,51 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>TruDoc AI</h1>
-        <p>AI-Powered Contract Risk Detector</p>
+        <p>Contract Risk and AI Image Detector</p>
       </header>
 
       <main className="container">
         <section className="upload-card">
-          <h2>Analyze Your Document</h2>
+          <h2>Choose Analysis Type</h2>
+
+          <div className="mode-buttons">
+            <button
+              type="button"
+              onClick={() => handleModeChange("contract")}
+              disabled={loading}
+            >
+              Contract Analysis
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleModeChange("image")}
+              disabled={loading}
+            >
+              AI Image Detection
+            </button>
+          </div>
+
+          <h2>
+            {mode === "contract"
+              ? "Analyze Your Document"
+              : "Detect AI-Generated Images"}
+          </h2>
 
           <p className="description">
-            Upload a contract to identify potentially risky clauses.
-            Supported formats: PDF, PNG, JPG, and JPEG.
+            {mode === "contract"
+              ? "Upload a contract to screen for potentially risky clauses. Supported formats: PDF, PNG, JPG, and JPEG."
+              : "Upload an image for an experimental AI-generated image prediction. Supported formats: PNG, JPG, JPEG, and WebP."}
           </p>
 
           <div className="upload-area">
             <input
               type="file"
-              accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+              accept={
+                mode === "contract"
+                  ? ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                  : ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+              }
               onChange={handleFileChange}
             />
 
@@ -185,6 +232,7 @@ function App() {
             <p>Complete the security verification:</p>
 
             <Turnstile
+              key={mode}
               siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
               onSuccess={(token) => {
                 setTurnstileToken(token);
@@ -197,10 +245,14 @@ function App() {
 
           <button
             type="button"
-            onClick={analyzeDocument}
+            onClick={analyzeFile}
             disabled={!file || loading || !turnstileToken}
           >
-            {loading ? "Analyzing..." : "Analyze Document"}
+            {loading
+              ? "Analyzing..."
+              : mode === "contract"
+                ? "Analyze Document"
+                : "Detect Image"}
           </button>
 
           {error && (
@@ -210,9 +262,9 @@ function App() {
           )}
         </section>
 
-        {result && (
+        {result && mode === "contract" && (
           <section className="result-card">
-            <h2>Analysis Results</h2>
+            <h2>Contract Analysis Results</h2>
 
             <p>
               <strong>File:</strong>{" "}
@@ -244,10 +296,8 @@ function App() {
             <div className="trudoc-ai-warning">
               <strong>⚠️ Automated assessment</strong>
               <p>
-                This result is an automated contract screening
-                estimate, not proof that a contract is safe, unsafe,
-                genuine, or fraudulent. The system may miss issues
-                or flag wording that is not actually problematic.
+                This is an automated screening estimate, not proof
+                that a contract is safe, unsafe, genuine, or fraudulent.
                 Verify important findings with a qualified legal
                 professional.
               </p>
@@ -274,13 +324,8 @@ function App() {
                             "Potential risk"}
                         </strong>
 
-                        {finding.description && (
-                          <p>{finding.description}</p>
-                        )}
-
-                        {finding.explanation && (
-                          <p>{finding.explanation}</p>
-                        )}
+                        {finding.description && <p>{finding.description}</p>}
+                        {finding.explanation && <p>{finding.explanation}</p>}
 
                         {finding.matched_text && (
                           <p>
@@ -308,9 +353,7 @@ function App() {
                 ))}
               </ul>
             ) : (
-              <p>
-                No potential issues were identified by the analysis.
-              </p>
+              <p>No potential issues were identified by the analysis.</p>
             )}
 
             {result.preview && (
@@ -320,18 +363,66 @@ function App() {
               </>
             )}
 
-            {result.notice && (
-              <p className="notice">{result.notice}</p>
+            {result.notice && <p className="notice">{result.notice}</p>}
+          </section>
+        )}
+
+        {result && mode === "image" && (
+          <section className="result-card">
+            <h2>AI Image Detection Results</h2>
+
+            <p>
+              <strong>File:</strong>{" "}
+              {result.filename || file?.name || "Uploaded image"}
+            </p>
+
+            <p>
+              <strong>Prediction: </strong>
+              {result.prediction || "Uncertain"}
+            </p>
+
+            <p>
+              <strong>Model label: </strong>
+              {result.model_label || "Unavailable"}
+            </p>
+
+            <p>
+              <strong>Confidence score: </strong>
+              {typeof result.score === "number"
+                ? `${(result.score * 100).toFixed(1)}%`
+                : "Unavailable"}
+            </p>
+
+            {Array.isArray(result.all_predictions) && (
+              <>
+                <h3>All model predictions</h3>
+                <ul>
+                  {result.all_predictions.map((item, index) => (
+                    <li key={`${item.label}-${index}`}>
+                      {item.label}: {(item.score * 100).toFixed(1)}%
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
+
+            <div className="trudoc-ai-warning">
+              <strong>Important limitation</strong>
+              <p>
+                This experimental model provides an estimate, not proof
+                of an image's origin. It can make mistakes, and its
+                confidence score is not a guarantee of accuracy.
+              </p>
+            </div>
+
+            {result.notice && <p className="notice">{result.notice}</p>}
           </section>
         )}
       </main>
 
       <footer className="footer">
-        <p>TruDoc AI | Contract screening assistance</p>
-        <p>
-          This tool does not replace professional legal advice.
-        </p>
+        <p>TruDoc AI | Contract screening and image analysis</p>
+        <p>This tool does not replace professional legal advice.</p>
       </footer>
 
       <ChatWidget
