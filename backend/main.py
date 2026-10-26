@@ -1,4 +1,6 @@
 from pydantic import BaseModel
+from PIL import Image
+from huggingface_hub import InferenceClient
 import os
 import json
 import shutil
@@ -19,7 +21,7 @@ import pytesseract
 from PIL import Image
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi import File, Form, HTTPException, UploadFile
 
 
 
@@ -599,6 +601,8 @@ Rules:
     print("DEBUG - Valid findings count:", result["findings_count"])
 
     return result
+
+
 
 
 # --------------------------------------------------

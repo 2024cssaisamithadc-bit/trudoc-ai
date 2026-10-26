@@ -1,8 +1,11 @@
+
 import React, { useState } from "react";
 import "./styles.css";
 import ChatWidget from "./ChatWidget";
 import { Turnstile } from "@marsidev/react-turnstile";
+
 const API_URL = import.meta.env.VITE_API_URL;
+
 function App() {
   const [turnstileToken, setTurnstileToken] = useState("");
   const [file, setFile] = useState(null);
@@ -56,6 +59,13 @@ function App() {
       return;
     }
 
+    if (!API_URL) {
+      setError(
+        "Backend URL is missing. Please configure VITE_API_URL."
+      );
+      return;
+    }
+
     setLoading(true);
     setResult(null);
     setError("");
@@ -65,13 +75,10 @@ function App() {
       formData.append("file", file);
       formData.append("turnstile_token", turnstileToken);
 
-      const response = await fetch(
-       `${import.meta.env.VITE_API_URL}/api/analyze`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch(`${API_URL}/api/analyze`, {
+        method: "POST",
+        body: formData,
+      });
 
       const data = await response.json();
 
@@ -85,15 +92,17 @@ function App() {
       }
 
       setResult(data);
-    } catch (error) {
-      console.error("TruDoc Error:", error);
-      setError(error.message || "Failed to analyze document.");
+    } catch (err) {
+      console.error("TruDoc Error:", err);
+      setError(
+        err.message || "Failed to analyze document. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Share the current analysis with the chatbot.
+  // Prepare the current analysis for the chatbot.
   const contractContext = result
     ? {
         filename: result.filename || file?.name || "Uploaded contract",
@@ -125,7 +134,6 @@ function App() {
       }
     : null;
 
-  // Change the key when a new analysis becomes available.
   const contractKey = result
     ? String(
         result.analyzed_at ||
@@ -134,6 +142,14 @@ function App() {
           }`
       )
     : "no-contract";
+
+  const riskScore = result
+    ? result.risk_score ?? result.score ?? "N/A"
+    : "N/A";
+
+  const riskLevel = result
+    ? result.risk_level ?? result.level ?? "Unknown"
+    : "Unknown";
 
   return (
     <div className="app">
@@ -170,7 +186,10 @@ function App() {
 
             <Turnstile
               siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-              onSuccess={(token) => setTurnstileToken(token)}
+              onSuccess={(token) => {
+                setTurnstileToken(token);
+                setError("");
+              }}
               onExpire={() => setTurnstileToken("")}
               onError={() => setTurnstileToken("")}
             />
@@ -185,7 +204,7 @@ function App() {
           </button>
 
           {error && (
-            <div className="error">
+            <div className="error" role="alert">
               <strong>Error:</strong> {error}
             </div>
           )}
@@ -206,7 +225,7 @@ function App() {
               </p>
 
               <div className="score">
-                {result.risk_score ?? result.score ?? "N/A"}
+                {riskScore}
                 <span> / 100</span>
               </div>
 
@@ -214,20 +233,21 @@ function App() {
                 <strong>Risk Level: </strong>
                 <span
                   className={`risk-level ${String(
-                    result.risk_level ?? result.level ?? "unknown"
+                    riskLevel
                   ).toLowerCase()}`}
                 >
-                  {result.risk_level ?? result.level ?? "Unknown"}
+                  {riskLevel}
                 </span>
               </p>
             </div>
 
             <div className="trudoc-ai-warning">
-              <strong>⚠️ AI-generated assessment</strong>
+              <strong>⚠️ Automated assessment</strong>
               <p>
-                This result is an AI-generated estimate, not proof
-                that a contract is genuine, fake, safe, or fraudulent.
-                AI may make mistakes or miss important details.
+                This result is an automated contract screening
+                estimate, not proof that a contract is safe, unsafe,
+                genuine, or fraudulent. The system may miss issues
+                or flag wording that is not actually problematic.
                 Verify important findings with a qualified legal
                 professional.
               </p>
@@ -263,7 +283,10 @@ function App() {
                         )}
 
                         {finding.matched_text && (
-                          <p>{finding.matched_text}</p>
+                          <p>
+                            <strong>Matched text: </strong>
+                            {finding.matched_text}
+                          </p>
                         )}
 
                         {finding.suggestion && (
@@ -273,10 +296,10 @@ function App() {
                           </p>
                         )}
 
-                        {finding.level && (
+                        {(finding.level || finding.severity) && (
                           <p>
                             <strong>Severity: </strong>
-                            {finding.level}
+                            {finding.level || finding.severity}
                           </p>
                         )}
                       </>
@@ -294,30 +317,29 @@ function App() {
               <>
                 <h3>Extracted Text Preview</h3>
                 <pre className="preview">{result.preview}</pre>
-          </>
+              </>
+            )}
+
+            {result.notice && (
+              <p className="notice">{result.notice}</p>
+            )}
+          </section>
         )}
+      </main>
 
-        {result.notice && (
-          <p className="notice">{result.notice}</p>
-        )}
-      </section>
-    )}
-  </main>
+      <footer className="footer">
+        <p>TruDoc AI | Contract screening assistance</p>
+        <p>
+          This tool does not replace professional legal advice.
+        </p>
+      </footer>
 
-  <footer className="footer">
-    <p>TruDoc AI | Contract screening assistance</p>
-    <p>
-      This tool does not replace professional legal advice.
-    </p>
-  </footer>
-
-  <ChatWidget
-    contractContext={contractContext}
-    contractKey={contractKey}
-  />
-</div>
-
-);
+      <ChatWidget
+        contractContext={contractContext}
+        contractKey={contractKey}
+      />
+    </div>
+  );
 }
 
 export default App;
