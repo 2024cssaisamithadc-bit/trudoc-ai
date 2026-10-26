@@ -7,3 +7,4 @@ httpx
 PyMuPDF
 pytesseract
 Pillow
+huggingface_hub
