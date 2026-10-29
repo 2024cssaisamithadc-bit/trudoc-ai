@@ -3,6 +3,7 @@ from io import BytesIO
 import json
 import os
 import shutil
+import torch
 
 import fitz
 import httpx
@@ -14,6 +15,7 @@ from groq import Groq
 from huggingface_hub import InferenceClient
 from PIL import Image
 from pydantic import BaseModel
+from transformers import pipeline
 
 load_dotenv()
 
@@ -285,11 +287,18 @@ async def analyze_document(
 # POST /api/detect-image
 # --------------------------------------------------
 
+
+# Cache the model so it loads only once
+image_detector = None
+
+
 @app.post("/api/detect-image")
 async def detect_ai_image(
     file: UploadFile = File(...),
     turnstile_token: str = Form(...),
 ):
+    global image_detector
+
     if not await verify_turnstile_token(turnstile_token):
         raise HTTPException(
             status_code=403,
@@ -306,8 +315,10 @@ async def detect_ai_image(
         )
 
     data = await file.read()
+
     if not data:
         raise HTTPException(status_code=400, detail="The image is empty.")
+
     if len(data) > 15 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Image exceeds 15 MB.")
 
@@ -320,38 +331,36 @@ async def detect_ai_image(
             detail="The uploaded file is not a valid image.",
         ) from exc
 
-    token = os.getenv("HF_TOKEN")
-    if not token:
-        raise HTTPException(
-            status_code=500,
-            detail="Image detection is not configured on the server.",
-        )
-
     try:
-        client = InferenceClient(
-            provider="hf-inference",
-            api_key=token,
-            timeout=45,
-        )
-        predictions = client.image_classification(
-            data,
-            model="umm-maybe/AI-image-detector",
-        )
+        if image_detector is None:
+            image_detector = pipeline(
+                "image-classification",
+                model="umm-maybe/AI-image-detector",
+                device=-1,
+            )
+
+        with Image.open(BytesIO(data)) as image:
+            image = image.convert("RGB")
+            predictions = image_detector(image)
 
         if not predictions:
             raise ValueError("The model returned no predictions.")
 
         results = [
-            {"label": str(item.label), "score": round(float(item.score), 4)}
+            {
+                "label": str(item["label"]),
+                "score": round(float(item["score"]), 4),
+            }
             for item in predictions
         ]
-        top = max(results, key=lambda item: item["score"])
-        label = top["label"].lower().replace("_", " ").replace("-", " ")
 
-        if any(word in label for word in ("artificial", "ai generated", "generated")):
+        top = max(results, key=lambda item: item["score"])
+        label = top["label"].strip().lower()
+
+        if label == "artificial" and top["score"] >= 0.65:
             prediction = "Likely AI-generated"
-        elif any(word in label for word in ("real", "human", "authentic", "natural")):
-            prediction = "Likely real"
+        elif label == "human" and top["score"] >= 0.65:
+            prediction = "Likely human-created"
         else:
             prediction = "Uncertain"
 
@@ -362,21 +371,20 @@ async def detect_ai_image(
             "score": top["score"],
             "all_predictions": results,
             "notice": (
-                "Experimental prediction only; this cannot prove an image's origin."
+                "Experimental prediction only. "
+                "This result cannot prove an image's origin."
             ),
         }
 
     except HTTPException:
         raise
     except Exception as exc:
-        print("Image detector error:", type(exc).__name__, str(exc)[:300])
+        print("Local image detector error:", type(exc).__name__, str(exc)[:300])
         raise HTTPException(
             status_code=502,
-            detail=(
-                "Image detection is unavailable. Check the Hugging Face model "
-                "and inference access."
-            ),
+            detail="Local image detection failed. Check the backend terminal.",
         ) from exc
+
 
 
 # --------------------------------------------------

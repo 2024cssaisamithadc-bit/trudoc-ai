@@ -1,3 +1,4 @@
+
 fastapi
 uvicorn[standard]
 python-multipart
@@ -8,3 +9,5 @@ PyMuPDF
 pytesseract
 Pillow
 huggingface_hub
+transformers
+torch
