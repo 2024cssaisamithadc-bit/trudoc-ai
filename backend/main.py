@@ -5,6 +5,9 @@ import os
 import shutil
 import torch
 
+import asyncio
+from huggingface_hub import InferenceClient
+
 import fitz
 import httpx
 import pytesseract
@@ -292,20 +295,19 @@ async def analyze_document(
 image_detector = None
 
 
+
 @app.post("/api/detect-image")
 async def detect_ai_image(
     file: UploadFile = File(...),
     turnstile_token: str = Form(...),
 ):
-    global image_detector
-
     if not await verify_turnstile_token(turnstile_token):
         raise HTTPException(
             status_code=403,
             detail="Security verification failed. Please try again.",
         )
 
-    filename = file.filename or ""
+    filename = file.filename or "uploaded-image"
     extension = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
 
     if extension not in {"png", "jpg", "jpeg", "webp"}:
@@ -317,10 +319,16 @@ async def detect_ai_image(
     data = await file.read()
 
     if not data:
-        raise HTTPException(status_code=400, detail="The image is empty.")
+        raise HTTPException(
+            status_code=400,
+            detail="The image is empty.",
+        )
 
     if len(data) > 15 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Image exceeds 15 MB.")
+        raise HTTPException(
+            status_code=413,
+            detail="Image exceeds 15 MB.",
+        )
 
     try:
         with Image.open(BytesIO(data)) as image:
@@ -331,30 +339,52 @@ async def detect_ai_image(
             detail="The uploaded file is not a valid image.",
         ) from exc
 
+    hf_token = os.getenv("HF_TOKEN")
+
+    if not hf_token:
+        raise HTTPException(
+            status_code=503,
+            detail="Hugging Face token is not configured on the backend.",
+        )
+
     try:
-        if image_detector is None:
-            image_detector = pipeline(
-                "image-classification",
-                model="umm-maybe/AI-image-detector",
-                device=-1,
-            )
+        client = InferenceClient(
+            provider="hf-inference",
+            api_key=hf_token,
+            timeout=60,
+        )
 
-        with Image.open(BytesIO(data)) as image:
-            image = image.convert("RGB")
-            predictions = image_detector(image)
+        predictions = await asyncio.to_thread(
+            client.image_classification,
+            data,
+            model="Organika/sdxl-detector",
+        )
 
-        if not predictions:
+        results = []
+
+        for item in predictions:
+            label = getattr(item, "label", None)
+            score = getattr(item, "score", None)
+
+            if isinstance(item, dict):
+                label = item.get("label")
+                score = item.get("score")
+
+            if label is not None and score is not None:
+                results.append({
+                    "label": str(label),
+                    "score": round(float(score), 4),
+                })
+
+        if not results:
             raise ValueError("The model returned no predictions.")
 
-        results = [
-            {
-                "label": str(item["label"]),
-                "score": round(float(item["score"]), 4),
-            }
-            for item in predictions
-        ]
+        results.sort(
+            key=lambda item: item["score"],
+            reverse=True,
+        )
 
-        top = max(results, key=lambda item: item["score"])
+        top = results[0]
         label = top["label"].strip().lower()
 
         if label == "artificial" and top["score"] >= 0.65:
@@ -372,18 +402,26 @@ async def detect_ai_image(
             "all_predictions": results,
             "notice": (
                 "Experimental prediction only. "
-                "This result cannot prove an image's origin."
+                "This model may not detect every image generator "
+                "and cannot prove an image's origin."
             ),
         }
 
     except HTTPException:
         raise
+
     except Exception as exc:
-        print("Local image detector error:", type(exc).__name__, str(exc)[:300])
+        print(
+            "Hugging Face image detection error:",
+            type(exc).__name__,
+            str(exc)[:500],
+        )
+
         raise HTTPException(
             status_code=502,
-            detail="Local image detection failed. Check the backend terminal.",
+            detail="Hosted image detection failed. Check the backend logs.",
         ) from exc
+
 
 
 

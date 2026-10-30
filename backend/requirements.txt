@@ -1,4 +1,3 @@
-
 fastapi
 uvicorn[standard]
 python-multipart
@@ -8,6 +7,4 @@ httpx
 PyMuPDF
 pytesseract
 Pillow
-huggingface_hub
-transformers
-torch
+huggingface_hub>=0.32.0
