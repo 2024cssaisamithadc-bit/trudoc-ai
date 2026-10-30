@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from groq import Groq
-from huggingface_hub import InferenceClient
+
 from PIL import Image
 from pydantic import BaseModel
 from transformers import pipeline
