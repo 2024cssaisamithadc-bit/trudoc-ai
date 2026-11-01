@@ -1,14 +1,9 @@
-from datetime import datetime
-from io import BytesIO
+import asyncio
 import json
 import os
 import shutil
-
-import torch
-from src.config import load_model, predict
-
-import asyncio
-from src.config import load_model, predict
+from datetime import datetime
+from io import BytesIO
 
 import fitz
 import httpx
@@ -17,9 +12,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from groq import Groq
-
 from PIL import Image
 from pydantic import BaseModel
+
+from src.config import load_model, predict
 
 load_dotenv()
 
