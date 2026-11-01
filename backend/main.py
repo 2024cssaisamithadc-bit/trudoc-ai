@@ -3,7 +3,6 @@ from io import BytesIO
 import json
 import os
 import shutil
-import torch
 
 import torch
 from src.config import load_model, predict
@@ -21,7 +20,6 @@ from groq import Groq
 
 from PIL import Image
 from pydantic import BaseModel
-from transformers import pipeline
 
 load_dotenv()
 
