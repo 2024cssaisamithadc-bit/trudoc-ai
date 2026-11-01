@@ -5,8 +5,11 @@ import os
 import shutil
 import torch
 
+import torch
+from src.config import load_model, predict
+
 import asyncio
-from huggingface_hub import InferenceClient
+from src.config import load_model, predict
 
 import fitz
 import httpx
@@ -296,11 +299,14 @@ image_detector = None
 
 
 
+
 @app.post("/api/detect-image")
 async def detect_ai_image(
     file: UploadFile = File(...),
     turnstile_token: str = Form(...),
 ):
+    global image_detector
+
     if not await verify_turnstile_token(turnstile_token):
         raise HTTPException(
             status_code=403,
@@ -331,78 +337,49 @@ async def detect_ai_image(
         )
 
     try:
-        with Image.open(BytesIO(data)) as image:
-            image.verify()
+        with Image.open(BytesIO(data)) as uploaded_image:
+            uploaded_image.verify()
+
+        with Image.open(BytesIO(data)) as uploaded_image:
+            image = uploaded_image.convert("RGB")
+
     except Exception as exc:
         raise HTTPException(
             status_code=400,
             detail="The uploaded file is not a valid image.",
         ) from exc
 
-    hf_token = os.getenv("HF_TOKEN")
-
-    if not hf_token:
-        raise HTTPException(
-            status_code=503,
-            detail="Hugging Face token is not configured on the backend.",
-        )
-
     try:
-        client = InferenceClient(
-            provider="hf-inference",
-            api_key=hf_token,
-            timeout=60,
+        if image_detector is None:
+            image_detector = load_model()
+
+        result = await asyncio.to_thread(
+            predict,
+            image,
+            image_detector,
         )
 
-        predictions = await asyncio.to_thread(
-            client.image_classification,
-            data,
-            model="Organika/sdxl-detector",
-        )
-
-        results = []
-
-        for item in predictions:
-            label = getattr(item, "label", None)
-            score = getattr(item, "score", None)
-
-            if isinstance(item, dict):
-                label = item.get("label")
-                score = item.get("score")
-
-            if label is not None and score is not None:
-                results.append({
-                    "label": str(label),
-                    "score": round(float(score), 4),
-                })
-
-        if not results:
-            raise ValueError("The model returned no predictions.")
-
-        results.sort(
-            key=lambda item: item["score"],
-            reverse=True,
-        )
-
-        top = results[0]
-        label = top["label"].strip().lower()
-
-        if label == "artificial" and top["score"] >= 0.65:
-            prediction = "Likely AI-generated"
-        elif label == "human" and top["score"] >= 0.65:
-            prediction = "Likely human-created"
-        else:
-            prediction = "Uncertain"
+        prediction = result["label"]
+        score = result["confidence"]
 
         return {
             "filename": filename,
-            "prediction": prediction,
-            "model_label": top["label"],
-            "score": top["score"],
-            "all_predictions": results,
+            "prediction": (
+                "Likely AI-generated"
+                if prediction == "AI-Generated"
+                else "Likely human-created"
+            ),
+            "model_label": prediction,
+            "score": score,
+            "all_predictions": [
+                {
+                    "label": prediction,
+                    "score": score,
+                }
+            ],
             "notice": (
                 "Experimental prediction only. "
-                "This model may not detect every image generator "
+                "This model may not detect every AI-generated image "
                 "and cannot prove an image's origin."
             ),
         }
@@ -412,16 +389,15 @@ async def detect_ai_image(
 
     except Exception as exc:
         print(
-            "Hugging Face image detection error:",
+            "Local image detection error:",
             type(exc).__name__,
             str(exc)[:500],
         )
 
         raise HTTPException(
-            status_code=502,
-            detail="Hosted image detection failed. Check the backend logs.",
+            status_code=500,
+            detail="Local image detection failed. Check the backend logs.",
         ) from exc
-
 
 
 

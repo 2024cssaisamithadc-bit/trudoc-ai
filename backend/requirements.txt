@@ -7,4 +7,5 @@ httpx
 PyMuPDF
 pytesseract
 Pillow
-huggingface_hub>=0.32.0
+onnxruntime
+numpy
