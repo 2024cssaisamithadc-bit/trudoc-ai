@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./ChatWidget.css";
 
-const API_URL = "http://127.0.0.1:8000/api/chat";
+const API_URL = "https://trudoc-ai-backend.onrender.com/api/chat";
 
 export default function ChatWidget({ contractContext, contractKey }) {
   const [isOpen, setIsOpen] = useState(false);

@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Auth from "./Auth";
+import { supabase } from "./supabaseClient";
 import "./styles.css";
 import ChatWidget from "./ChatWidget";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -6,6 +8,26 @@ import { Turnstile } from "@marsidev/react-turnstile";
 const API_URL = import.meta.env.VITE_API_URL;
 
 function App() {
+
+  const [user, setUser] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => {
+    setUser(data.session?.user ?? null);
+    setCheckingAuth(false);
+  });
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user ?? null);
+    setCheckingAuth(false);
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
+
   const [turnstileToken, setTurnstileToken] = useState("");
   const [file, setFile] = useState(null);
   const [mode, setMode] = useState("contract");
@@ -169,11 +191,27 @@ function App() {
     ? result.risk_level ?? result.level ?? "Unknown"
     : "Unknown";
 
-  return (
+ if (checkingAuth) {
+  return <div>Loading...</div>;
+}
+
+if (!user) {
+  return <Auth onLogin={setUser} />;
+}
+
+return (
     <div className="app">
       <header className="header">
         <h1>TruDoc AI</h1>
         <p>Contract Risk and AI Image Detector</p>
+    
+
+        <button
+          type="button"
+          onClick={() => supabase.auth.signOut()}
+        >
+          Logout
+        </button>
       </header>
 
       <main className="container">
